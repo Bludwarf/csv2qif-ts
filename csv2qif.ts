@@ -4,21 +4,21 @@ import moment from "moment";
 
 function printRow(
   rowNr: string | number,
-  date: string | Date,
-  amount: string | number,
-  payee: string,
-  memo: string
+  dateOperation: string | Date, // date
+  libelle: string, // memo
+  debit: string | number,
+  credit: string | number,
 ) {
   console.log(
     String(rowNr).padEnd(3),
     " | ",
-    String(date).padEnd(8),
+    String(dateOperation).padEnd(10),
     " | ",
-    String(amount).padStart(10),
+    String(debit).padStart(10),
+      " | ",
+      String(credit).padStart(10),
     " | ",
-    payee.padEnd(15),
-    " | ",
-    memo.padEnd(20)
+    libelle.padEnd(20)
   );
 }
 
@@ -37,26 +37,28 @@ function csv2qif(
   let rowNr = 1;
 
   console.log("");
-  printRow("Row", "Date", "Amount", "Payee", "Memo");
+  // TODO Ajouter assert sur les headers : "Date operation";"Date valeur";"Libelle";"Debit";"Credit"
+  printRow("Row", "Date","Libelle","Debit","Credit");
   console.log("".padEnd(80, "-"));
 
   fs.createReadStream(inputFile)
     .pipe(csv({ separator: ";", mapHeaders: ({ header }) => header.trim() }))
     .on("data", (row) => {
-      printRow(rowNr++, row.Date, row.Amount, row.Payee, row.Memo);
+      const SrcDate = row["Date operation"];
+      printRow(rowNr++, SrcDate, row.Libelle, row.Debit, row.Credit);
 
-      let Date = moment(row.Date, "DD/MM/YY");
+      let Date = moment(SrcDate, "DD/MM/YYYY");
 
       if (Date.isValid()) {
         qifData.push("D" + Date.format("DD/MM/YY"));
       } else {
-        qifData.push("D" + " - invalid date " + row.Date + "");
-        console.log("Invalid date:", row.Date);
+        qifData.push("D" + " - invalid date " + SrcDate + "");
+        console.log("Invalid date:", SrcDate);
       }
 
-      qifData.push("M" + row.Memo);
-      qifData.push("T" + row.Amount.trim());
-      qifData.push("P" + row.Payee.trim());
+      // qifData.push("M" + row.Libelle); // On inverse volontairement Mémo et Tiers (idem CMB)
+      qifData.push("T" + t(row));
+      qifData.push("P" + row.Libelle.trim()); // On inverse volontairement Mémo et Tiers (idem CMB)
       qifData.push("^");
     })
     .on("end", () => {
@@ -71,6 +73,27 @@ function csv2qif(
     });
 }
 
+function t(row: any): string {
+    const debitAsCents = parseAmountAsCents(row.Debit);
+    const creditAsCents = parseAmountAsCents(row.Credit);
+    const diffAsCents = creditAsCents-debitAsCents;
+    return formatAmountAsCents(diffAsCents);
+}
+
+function parseAmountAsCents(amount: number | string): Cents {
+    if (typeof(amount) === "number") {
+        return amount * 100;
+    }
+    return +(amount.replace(',', ''));
+}
+
+function formatAmountAsCents(amountAsCents: Cents): string {
+    const centsString = '' + (amountAsCents);
+    return centsString.slice(0, -2) + ',' +  centsString.slice(-2);
+}
+
+type Cents = number;
+
 // Usage:
 const args = process.argv.slice(2);
 switch (args.length) {
@@ -83,3 +106,7 @@ switch (args.length) {
   default:
     csv2qif(args[0], args[1]);
 }
+
+// TODO tester : "02/05/2022";"02/05/2022";"CARTE 30/04 SUPER U 35 ROMILLE";"38,02";""
+// TODO tester : "30/04/2025";"30/04/2025";"vers Coffre";"50,00";""
+// TODO tester : "30/04/2025";"30/04/2025";"VIR CPAM ILLE ET VILAINE";"";"112,49"
