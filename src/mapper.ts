@@ -11,10 +11,3 @@ export interface Mapper<I extends CSVRow> {
 export interface CSVRow extends Record<string, any> {
 
 }
-
-export interface QIFRow extends Record<string, string> {
-  d: string;
-  m?: string;
-  t: string;
-  p: string;
-}
