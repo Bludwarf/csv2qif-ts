@@ -17,8 +17,8 @@ function printRow(
     String(dateOperation).padEnd(10),
     " | ",
     String(debit).padStart(10),
-      " | ",
-      String(credit).padStart(10),
+    " | ",
+    String(credit).padStart(10),
     " | ",
     libelle.padEnd(20)
   );
@@ -40,12 +40,12 @@ function csv2qif(
   console.log("");
   const mapper = new CMBMapper();
   // TODO Ajouter assert sur les headers : "Date operation";"Date valeur";"Libelle";"Debit";"Credit"
-    mapper.printHeaders();
+  mapper.printHeaders();
   console.log("".padEnd(80, "-"));
 
 
   fs.createReadStream(inputFile)
-    .pipe(csv({ separator: ";", mapHeaders: ({ header }) => header.trim() }))
+    .pipe(csv({separator: ";", mapHeaders: ({header}) => header.trim()}))
     .on("data", (row) => {
       const qifTransaction = mapper.map(rowNr++, row);
       qifTransactions.push(qifTransaction);
