@@ -1,6 +1,7 @@
 import csv from "csv-parser";
 import fs from "fs";
 import moment from "moment";
+import {CMBMapper} from "./src/mappers/cmb";
 
 function printRow(
   rowNr: string | number,
@@ -37,28 +38,22 @@ function csv2qif(
   let rowNr = 1;
 
   console.log("");
+  const mapper = new CMBMapper();
   // TODO Ajouter assert sur les headers : "Date operation";"Date valeur";"Libelle";"Debit";"Credit"
-  printRow("Row", "Date","Libelle","Debit","Credit");
+    mapper.printHeaders();
   console.log("".padEnd(80, "-"));
+
 
   fs.createReadStream(inputFile)
     .pipe(csv({ separator: ";", mapHeaders: ({ header }) => header.trim() }))
     .on("data", (row) => {
-      const SrcDate = row["Date operation"];
-      printRow(rowNr++, SrcDate, row.Libelle, row.Debit, row.Credit);
-
-      let Date = moment(SrcDate, "DD/MM/YYYY");
-
-      if (Date.isValid()) {
-        qifData.push("D" + Date.format("DD/MM/YY"));
-      } else {
-        qifData.push("D" + " - invalid date " + SrcDate + "");
-        console.log("Invalid date:", SrcDate);
+      const qifRow = mapper.map(rowNr++, row);
+      qifData.push("D" + qifRow.d);
+      if (qifRow.m) {
+        qifData.push("M" + qifRow.m);
       }
-
-      // qifData.push("M" + row.Libelle); // On inverse volontairement Mémo et Tiers (idem CMB)
-      qifData.push("T" + t(row));
-      qifData.push("P" + row.Libelle.trim()); // On inverse volontairement Mémo et Tiers (idem CMB)
+      qifData.push("T" + qifRow.t);
+      qifData.push("P" + qifRow.p);
       qifData.push("^");
     })
     .on("end", () => {
@@ -72,27 +67,6 @@ function csv2qif(
       });
     });
 }
-
-function t(row: any): string {
-    const debitAsCents = parseAmountAsCents(row.Debit);
-    const creditAsCents = parseAmountAsCents(row.Credit);
-    const diffAsCents = creditAsCents-debitAsCents;
-    return formatAmountAsCents(diffAsCents);
-}
-
-function parseAmountAsCents(amount: number | string): Cents {
-    if (typeof(amount) === "number") {
-        return amount * 100;
-    }
-    return +(amount.replace(',', ''));
-}
-
-function formatAmountAsCents(amountAsCents: Cents): string {
-    const centsString = '' + (amountAsCents);
-    return centsString.slice(0, -2) + ',' +  centsString.slice(-2);
-}
-
-type Cents = number;
 
 // Usage:
 const args = process.argv.slice(2);
