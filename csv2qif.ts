@@ -1,7 +1,8 @@
 import csv from "csv-parser";
 import fs from "fs";
-import moment from "moment";
 import {CMBMapper} from "./src/mappers/cmb";
+import {QifTransaction, QifType} from "qif-ts/dist/types";
+import {serializeQif} from 'qif-ts';
 
 function printRow(
   rowNr: string | number,
@@ -27,8 +28,7 @@ function csv2qif(
   inputFile: string = "input.csv",
   outputFile: string = "output.qif"
 ): void {
-  const qifData: string[] = [];
-  qifData.push("!Type:Bank");
+  const qifTransactions: QifTransaction[] = [];
 
   console.log(
     "Number of data rows in the csv file:",
@@ -47,18 +47,16 @@ function csv2qif(
   fs.createReadStream(inputFile)
     .pipe(csv({ separator: ";", mapHeaders: ({ header }) => header.trim() }))
     .on("data", (row) => {
-      const qifRow = mapper.map(rowNr++, row);
-      qifData.push("D" + qifRow.d);
-      if (qifRow.m) {
-        qifData.push("M" + qifRow.m);
-      }
-      qifData.push("T" + qifRow.t);
-      qifData.push("P" + qifRow.p);
-      qifData.push("^");
+      const qifTransaction = mapper.map(rowNr++, row);
+      qifTransactions.push(qifTransaction);
     })
     .on("end", () => {
       console.log("");
-      fs.writeFile(outputFile, qifData.join("\n"), (err) => {
+      const qifText = serializeQif({
+        type: QifType.Bank,
+        transactions: qifTransactions,
+      });
+      fs.writeFile(outputFile, qifText, (err) => {
         if (err) {
           console.log("Error writing QIF file", err);
         } else {

@@ -1,7 +1,9 @@
 import {CSVRow, Mapper, QIFRow} from "../mapper";
 import moment from "moment/moment";
+import { QifData } from 'qif-ts';
+import {QifTransaction} from "qif-ts/dist/types";
 
-export class CMBMapper implements Mapper<CMBCSVRow, CMBQIFRow> {
+export class CMBMapper implements Mapper<CMBCSVRow> {
     printHeaders() {
         this.printRowStrings(
             "Row",
@@ -40,7 +42,7 @@ export class CMBMapper implements Mapper<CMBCSVRow, CMBQIFRow> {
         );
     }
 
-    map(rowNr: number, row: CMBCSVRow): CMBQIFRow {
+    map(rowNr: number, row: CMBCSVRow): QifTransaction {
         const SrcDate = row["Date operation"];
         this.printRow(rowNr, row);
 
@@ -54,24 +56,29 @@ export class CMBMapper implements Mapper<CMBCSVRow, CMBQIFRow> {
             console.log("Invalid date:", SrcDate);
         }
 
-        // qifData.push("M" + row.Libelle); // On inverse volontairement Mémo et Tiers (idem CMB)
         return {
-            d: dateOperationString,
-            t: this.t(row),
-            p: row.Libelle.trim(), // On inverse volontairement Mémo et Tiers (idem CMB)
+            date: dateOperationString,
+            amount: this.t(row),
+            memo: row.Libelle.trim(),
         }
     }
 
-    t(row: CMBCSVRow): string {
-        const debitAsCents = parseAmountAsCents(row.Debit);
-        const creditAsCents = parseAmountAsCents(row.Credit);
-        const diffAsCents = creditAsCents-debitAsCents;
-        return formatAmountAsCents(diffAsCents);
+    t(row: CMBCSVRow): number {
+        const debit = parseAmount(row.Debit);
+        const credit = parseAmount(row.Credit);
+        return credit-debit;
     }
 
 }
 
-function parseAmountAsCents(amount: number | string): Cents {
+function parseAmount(amount: CMBAmount): number {
+    if (typeof(amount) === "number") {
+        return amount;
+    }
+    return +(amount.replace(',', '')) / 100;
+}
+
+function parseAmountAsCents(amount: CMBAmount): Cents {
     if (typeof(amount) === "number") {
         return amount * 100;
     }
@@ -83,13 +90,14 @@ function formatAmountAsCents(amountAsCents: Cents): string {
     return centsString.slice(0, -2) + ',' +  centsString.slice(-2);
 }
 
+type CMBAmount = string | number;
 type Cents = number;
 
 interface CMBCSVRow extends CSVRow {
     "Date operation": string | Date; // date
     Libelle: string; // memo
-    Debit: string | number;
-    Credit: string | number;
+    Debit: CMBAmount;
+    Credit: CMBAmount;
 }
 
 interface CMBQIFRow extends QIFRow {
