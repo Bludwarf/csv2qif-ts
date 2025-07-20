@@ -1,6 +1,6 @@
 import {QifTransaction, QifType} from "qif-ts/dist/types";
 import fs from "fs";
-import {CMBMapper} from "./mappers/cmb";
+import {CMBRowConverter} from "./row-converters/cmb";
 import csv from "csv-parser";
 import {serializeQif} from "qif-ts";
 
@@ -19,7 +19,7 @@ export class FileConverter {
     let rowNr = 1;
 
     console.log("");
-    const mapper = new CMBMapper();
+    const mapper = new CMBRowConverter();
     // TODO Ajouter assert sur les headers : "Date operation";"Date valeur";"Libelle";"Debit";"Credit"
     mapper.printHeaders();
     console.log("".padEnd(80, "-"));
@@ -28,7 +28,7 @@ export class FileConverter {
     fs.createReadStream(inputFile)
       .pipe(csv({separator: ";", mapHeaders: ({header}) => header.trim()}))
       .on("data", (row) => {
-        const qifTransaction = mapper.map(rowNr++, row);
+        const qifTransaction = mapper.convert(rowNr++, row);
         qifTransactions.push(qifTransaction);
       })
       .on("end", () => {

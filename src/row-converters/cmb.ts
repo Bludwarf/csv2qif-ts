@@ -1,8 +1,8 @@
-import {CSVRow, Mapper} from "../mapper";
+import {Row, RowConverter} from "../row-converter";
 import moment from "moment/moment";
 import {QifTransaction} from "qif-ts/dist/types";
 
-export class CMBMapper implements Mapper<CMBCSVRow> {
+export class CMBRowConverter implements RowConverter<CMBRow> {
   printHeaders() {
     this.printRowStrings(
       "Row",
@@ -13,7 +13,7 @@ export class CMBMapper implements Mapper<CMBCSVRow> {
     );
   }
 
-  printRow(rowNr: number, row: CMBCSVRow) {
+  printRow(rowNr: number, row: CMBRow) {
     this.printRowStrings(
       String(rowNr),
       String(row["Date operation"]),
@@ -41,7 +41,7 @@ export class CMBMapper implements Mapper<CMBCSVRow> {
     );
   }
 
-  map(rowNr: number, row: CMBCSVRow): QifTransaction {
+  convert(rowNr: number, row: CMBRow): QifTransaction {
     const SrcDate = row["Date operation"];
     this.printRow(rowNr, row);
 
@@ -63,16 +63,22 @@ export class CMBMapper implements Mapper<CMBCSVRow> {
     }
   }
 
-  private getAmount(row: CMBCSVRow): number {
+  private getAmount(row: CMBRow): number {
     const debit = parseAmount(row.Debit);
     const credit = parseAmount(row.Credit);
     return credit - debit;
   }
 
-  private getPayee(row: CMBCSVRow): string | undefined {
-    const m = /CARTE \d\d\/\d\d (.+)/.exec(row.Libelle);
-    if (m) {
-      return m[1];
+  private getPayee(row: CMBRow): string | undefined {
+    const regexpList: RegExp[] = [
+      /CARTE \d\d\/\d\d (.+)/,
+      /PRLV (.+)/,
+    ]
+    for (const regexp of regexpList) {
+      const m = regexp.exec(row.Libelle);
+      if (m) {
+        return m[1];
+      }
     }
     return undefined;
   }
@@ -102,7 +108,7 @@ function checkAmountDecimals(amountAsNumber: number) {
 type CMBAmount = string | number;
 type Cents = number;
 
-interface CMBCSVRow extends CSVRow {
+interface CMBRow extends Row {
   "Date operation": string | Date; // date
   Libelle: string; // memo
   Debit: CMBAmount;
