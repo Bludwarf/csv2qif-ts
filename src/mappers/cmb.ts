@@ -57,17 +57,25 @@ export class CMBMapper implements Mapper<CMBCSVRow> {
 
     return {
       date: dateOperationString,
-      amount: this.t(row),
+      amount: this.getAmount(row),
       memo: row.Libelle.trim(),
+      payee: this.getPayee(row),
     }
   }
 
-  t(row: CMBCSVRow): number {
+  private getAmount(row: CMBCSVRow): number {
     const debit = parseAmount(row.Debit);
     const credit = parseAmount(row.Credit);
     return credit - debit;
   }
 
+  private getPayee(row: CMBCSVRow): string | undefined {
+    const m = /CARTE \d\d\/\d\d (.+)/.exec(row.Libelle);
+    if (m) {
+      return m[1];
+    }
+    return undefined;
+  }
 }
 
 function parseAmount(amount: CMBAmount): number {
