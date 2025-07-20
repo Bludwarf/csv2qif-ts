@@ -27,14 +27,20 @@ export class DirectoryConverter extends FileConverter {
         console.log(`Directory ${inputFile} ignored.`);
         continue;
       }
-      const outputFile = this.getOutputFile(inputFileName, outputDirectory);
+
+      const inputFileExt = path.extname(inputFileName);
+      if (inputFileExt.toLocaleLowerCase() !== '.csv') {
+        console.log(`File ${inputFile} ignored.`);
+        continue;
+      }
+
+      const outputFile = this.getOutputFile(inputFileName, inputFileExt, outputDirectory);
       console.log(`Converting ${inputFile} to ${outputFile}...`)
       fileConverter.convert(inputFile, outputFile);
     }
   }
 
-  private getOutputFile(inputFileName: string, outputDirectory: string) {
-    const inputFileExt = path.extname(inputFileName);
+  private getOutputFile(inputFileName: string, inputFileExt: string, outputDirectory: string) {
     const outputFileName = inputFileName.slice(0, -inputFileExt.length) + '.qif';
     return path.join(outputDirectory, outputFileName);
   }
