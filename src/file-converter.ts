@@ -5,6 +5,9 @@ import csv from "csv-parser";
 import {serializeQif} from "qif-ts";
 
 export class FileConverter {
+  constructor(readonly rowConverter: CMBRowConverter) {
+  }
+
   convert(
     inputFile: string = "input.csv",
     outputFile: string = "output.qif"
@@ -19,16 +22,15 @@ export class FileConverter {
     let rowNr = 1;
 
     console.log("");
-    const mapper = new CMBRowConverter();
     // TODO Ajouter assert sur les headers : "Date operation";"Date valeur";"Libelle";"Debit";"Credit"
-    mapper.printHeaders();
+    this.rowConverter.printHeaders();
     console.log("".padEnd(80, "-"));
 
 
     fs.createReadStream(inputFile)
       .pipe(csv({separator: ";", mapHeaders: ({header}) => header.trim()}))
       .on("data", (row) => {
-        const qifTransaction = mapper.convert(rowNr++, row);
+        const qifTransaction = this.rowConverter.convert(rowNr++, row);
         qifTransactions.push(qifTransaction);
       })
       .on("end", () => {

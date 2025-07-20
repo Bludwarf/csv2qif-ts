@@ -1,6 +1,7 @@
 import fs from "fs";
 import {FileConverter} from "./src/file-converter";
 import {DirectoryConverter} from "./src/directory-converter";
+import {CMBRowConverter} from "./src/row-converters/cmb";
 
 function printRow(
   rowNr: string | number,
@@ -26,9 +27,10 @@ function csv2qif(
   inputFile?: string,
   outputFile?: string
 ): void {
+  const rowConverter = new CMBRowConverter();
   const converter = inputFile && fs.lstatSync(inputFile).isDirectory()
-    ? new DirectoryConverter()
-    : new FileConverter();
+    ? new DirectoryConverter(rowConverter)
+    : new FileConverter(rowConverter);
   converter.convert(inputFile, outputFile);
 }
 

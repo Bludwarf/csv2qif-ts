@@ -19,7 +19,7 @@ export class DirectoryConverter extends FileConverter {
       throw new Error('Please specify inputDirectory');
     }
 
-    const fileConverter = new FileConverter();
+    const fileConverter = new FileConverter(this.rowConverter);
     const inputFileNames = fs.readdirSync(inputDirectory);
     for (const inputFileName of inputFileNames) {
       const inputFile = path.join(inputDirectory, inputFileName);
